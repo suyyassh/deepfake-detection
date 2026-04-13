@@ -1,0 +1,8 @@
+☐ create a readme.md file - research online what should go into this file
+☐ upload this repo on github and keep updating the repo for major changes like backbone or dataset swaps
+☐ include compression_quality as a parameter in base_config.yaml and use that as an argument in apply_compression.py in helpers.py
+☐ remember to change base_config.yaml when you create new configs with different backbones
+☐ backbones to try - 
+    ☐ recommended backbones by gemini - MobileNetV3-large, ViT-Tiny or Small and EfficientNetV2-S
+    ☐ recommended backbones by Rain - ResNet, Xception
+☐ 

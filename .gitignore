@@ -1,0 +1,15 @@
+# python
+__pycache__/
+*.py[cod]
+
+# data and results
+data/
+results/training/weights/
+*.pth
+
+# environments
+venv/
+.env
+
+# to-do
+.todo

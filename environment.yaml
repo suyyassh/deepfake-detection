@@ -1,0 +1,34 @@
+name: deepfake
+
+channels:
+ - pytorch
+ - nvidia
+ - conda-forge
+ - defaults
+
+dependencies:
+ - python=3.10
+ - pip
+
+ # deeplearning and vision
+ - pytorch
+ - torchvision
+ - torchaudio
+ - pytorch-cuda=11.8
+
+ # data-manipulation and metrics
+ - pandas
+ - numpy
+ - scikit-learn
+ - matplotlib
+
+ # image processing and utilities
+ - pillow
+ - tqdm
+ - pyyaml
+
+ # external libraries
+ - pip:
+   - timm
+   - opencv-python
+   - scipy

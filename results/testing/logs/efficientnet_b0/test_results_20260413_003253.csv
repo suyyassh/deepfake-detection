@@ -1,0 +1,5 @@
+model,datetime,dataset,test_set,accuracy,f1_score,auc,weight_file
+baseline,20260413_003253,UADFA,Set_C_RAW,0.9936,0.9936,0.9999,baseline_20260412_133413.pth
+baseline,20260413_003253,UADFA,Set_D_COMP,0.8308,0.8262,0.9833,baseline_20260412_133413.pth
+novel,20260413_003253,UADFA,Set_C_RAW,0.4989,0.3329,0.9183,novel_20260412_133413.pth
+novel,20260413_003253,UADFA,Set_D_COMP,0.4989,0.3329,0.929,novel_20260412_133413.pth
