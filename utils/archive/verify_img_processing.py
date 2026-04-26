@@ -1,4 +1,4 @@
-# this script was written to verify if image_processing.py works as intended
+# this script was written to verify if helpers_old.py works as intended
 # this script shows the original image and it's representation in frequency domain
 
 import cv2

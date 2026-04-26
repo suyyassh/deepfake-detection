@@ -2,8 +2,8 @@ project_name: "deepfake_detection"
 
 # data
 data:
- dataset: "UADFA"
- raw_dir: "data/raw/UADFA"
+ dataset: "faceforensics++"
+ raw_dir: "data/raw/faceforensics++"
  img_size: 256
  num_workers: 4
 
