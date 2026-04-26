@@ -8,115 +8,112 @@ from utils.config_loader import load_config, validate_config
 
 def get_flattened_files(directory):
     """
-    return a list of flattened filenames found in a directory
+    returns a list of flattened filenames found in a directory.
     """
-    # get all the paths where the file ends with .jpg or .png and then strip the entire path
-    # and reutrn just the filename i.e. /data/images/face01.jpg becomes face01.jpg
     return [os.path.basename(f) for f in glob.glob(os.path.join(directory, '*.[jp][pn]*g'))]
 
-def build_raw_path_map(raw_dir, category):
+def get_real_name(fake_name):
     """
-    creates a dictionary that maps a flattened key to a path.
-    we need flattened keys as they will act as "keys" for looking up manipulated
-    images when creating manifests.
+    derives the exact real target filename from a fake filename.
+    fake: train_Deepfakes_000_003_012.jpg --> Real: train_000_012.jpg
     """
-    path_map = {}
-
-    # raw_dir / real or fake / <any subdirectories, however deep> / <any image file>
-    search_pattern = os.path.join(raw_dir, category, '**', '*.[jp][pn]*g')
-
-    # for all the files that match the search pattern, create a flattened key (foldername_filename)
-    # and map that key to the path
-    for path in glob.glob(search_pattern, recursive=True):
-        fname = f"{os.path.basename(os.path.dirname(path))}_{os.path.basename(path)}"
-        path_map[fname] = path
-    
-    return path_map
-
-def split_filenames(filenames, train_pct=0.7, val_pct=0.15):
-    """
-    splits filenames into 70/15/15 while maintaining identity isolation
-    """
-    random.seed(42)
-    random.shuffle(filenames) 
-    n = len(filenames)
-    train_end = int(n * train_pct)
-    val_end = train_end + int(n * val_pct)
-    return filenames[:train_end], filenames[train_end:val_end], filenames[val_end:]
+    parts = fake_name.split('_')
+    split_name = parts[0]
+    target_id = parts[2]
+    frame = parts[-1]
+    return f"{split_name}_{target_id}_{frame}"
 
 def generate_manifests(config):
     """
-    does what it says it does
+    generates training and testing manifests for the models.
     """
-    # setting up paths
     dataset = config['data']['dataset']
-    raw_dir = config['data']['raw_dir']
     manip_dir = os.path.join('data', 'manipulated', dataset)
+    raw_flat_dir = os.path.join('data', 'raw_flattened', dataset)
     manif_dir = os.path.join('data', 'manifests', dataset)
 
     # creating directories for baseline, novel and test
     for folder in ['baseline', 'novel', 'test']:
         os.makedirs(os.path.join(manif_dir, folder), exist_ok=True)
 
-    # mapping flattened keys for RAW files to their paths
-    print("Update: mapping flattened keys for RAW images (real and fake) to their paths")
-    raw_real_map = build_raw_path_map(raw_dir, 'real') 
-    raw_fake_map = build_raw_path_map(raw_dir, 'fake')
+    # get all flattened filenames
+    print("Update: Reading flattened files...")
+    all_reals = get_flattened_files(os.path.join(raw_flat_dir, 'real'))
+    all_fakes = get_flattened_files(os.path.join(raw_flat_dir, 'fake'))
+    
+    # fast lookup set
+    all_reals_set = set(all_reals)
 
-    # getting flattened filenames real compressed and fingerprint removed fakes
-    all_reals = get_flattened_files(os.path.join(manip_dir, 'real_compressed'))
-    all_fakes = get_flattened_files(os.path.join(manip_dir, 'fake_fpr'))
+    # creating the train/val/test splits based on filename prefixes
+    test_f = [f for f in all_fakes if f.startswith('test_')]
+    train_val_f = [f for f in all_fakes if f.startswith('train_')]
+    
+    test_r = [f for f in all_reals if f.startswith('test_')]
+    train_val_r = [f for f in all_reals if f.startswith('train_')]
 
-    # create the train/validate/test split
-    train_r, val_r, test_r = split_filenames(all_reals)
-    train_f, val_f, test_f = split_filenames(all_fakes)
- 
-    def build_novel_manifest(f_list, r_list, out_name):
+    # shuffle and split train_val into 85/15 train/val split
+    random.seed(42)
+    random.shuffle(train_val_f)
+    random.shuffle(train_val_r)
+    
+    val_f_end = int(len(train_val_f) * 0.15)
+    val_r_end = int(len(train_val_r) * 0.15)
+    
+    val_f, train_f = train_val_f[:val_f_end], train_val_f[val_f_end:]
+    val_r, train_r = train_val_r[:val_r_end], train_val_r[val_r_end:]
+
+    def build_novel_manifest(f_list, out_name):
         """
-        builds a four image quadruplets for contrastive learning
-        we will not apply labels for this on the fly when feeding data to the model
+        builds paired quadruplets for contrastive learning.
         """
         data = []
         for f_name in f_list:
-            r_name = random.choice(r_list) # pairs a fake with a random real identity
+            r_name = get_real_name(f_name)
+            # ensure the matching real frame exists
+            if r_name not in all_reals_set:
+                continue
+                
             data.append({
-                'fake_fpr': os.path.join(manip_dir, 'fake_fpr', f_name), # fingerprint removed fake
-                'fake_fpr_comp': os.path.join(manip_dir, 'fake_fpr_compressed', f_name), # fingerprint removed compressed fake
-                'real_raw': raw_real_map[r_name], # real RAW image
-                'real_comp': os.path.join(manip_dir, 'real_compressed', r_name) # compressed real
+                'fake_fpr': os.path.join(manip_dir, 'fake_fpr', f_name),
+                'fake_fpr_comp': os.path.join(manip_dir, 'fake_fpr_compressed', f_name),
+                'real_raw': os.path.join(raw_flat_dir, 'real', r_name),
+                'real_comp': os.path.join(manip_dir, 'real_compressed', r_name)
             })
         pd.DataFrame(data).to_csv(os.path.join(manif_dir, 'novel', out_name), index=False)
         
     def build_baseline_manifest(f_list, r_list, out_name):
         """
-        builds image pairs of real/fake images for training the baseline model
+        builds image pairs of real/fake images for the baseline model.
         """
         data = []
-        for f_name in f_list: data.append({'path': raw_fake_map[f_name], 'label':1})
-        for r_name in r_list: data.append({'path': raw_real_map[r_name], 'label':0})
+        for f_name in f_list: 
+            data.append({'path': os.path.join(raw_flat_dir, 'fake', f_name), 'label': 1})
+        for r_name in r_list: 
+            data.append({'path': os.path.join(raw_flat_dir, 'real', r_name), 'label': 0})
         
-        # shuffle the rows so that model doesn't see all fakes and then all reals
         df = pd.DataFrame(data).sample(frac=1, random_state=42)
         df.to_csv(os.path.join(manif_dir, 'baseline', out_name), index=False)
     
     def build_test_manifest(f_list, r_list, fake_dir, real_dir, out_name, use_raw=False):
         """
-        build image pairs for testing the real/fake images for testing both models
+        builds test manifests and includes the manipulation method for deeper evaluation.
         """
         data = []
         for f_name in f_list:
-            f_path = raw_fake_map[f_name] if use_raw else os.path.join(manip_dir, fake_dir, f_name)
-            data.append({'path': f_path, 'label': 1})
+            method = f_name.split('_')[1]
+            f_path = os.path.join(raw_flat_dir, 'fake', f_name) if use_raw else os.path.join(manip_dir, fake_dir, f_name)
+            data.append({'path': f_path, 'label': 1, 'method': method})
+            
         for r_name in r_list:
-            r_path = raw_real_map[r_name] if use_raw else os.path.join(manip_dir, real_dir, r_name)
-            data.append({'path': r_path, 'label': 0})
+            r_path = os.path.join(raw_flat_dir, 'real', r_name) if use_raw else os.path.join(manip_dir, real_dir, r_name)
+            data.append({'path': r_path, 'label': 0, 'method': 'Real'})
         
         df = pd.DataFrame(data).sample(frac=1, random_state=42)
         df.to_csv(os.path.join(manif_dir, 'test', out_name), index=False)
 
     print("Update: creating manifest for training the novel model")
-    build_novel_manifest(train_f, train_r, 'train.csv')
-    build_novel_manifest(val_f, val_r, 'val.csv')
+    build_novel_manifest(train_f, 'train.csv')
+    build_novel_manifest(val_f, 'val.csv')
 
     print("Update: creating manifest for training the baseline model")
     build_baseline_manifest(train_f, train_r, 'train.csv')

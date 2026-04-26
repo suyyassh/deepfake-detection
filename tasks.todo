@@ -1,8 +1,9 @@
 ☐ create a readme.md file - research online what should go into this file
 ✔ upload this repo on github and keep updating the repo for major changes like backbone or dataset swaps @done (4/26/2026, 6:51:08 AM)
 ✘ include compression_quality as a parameter in base_config.yaml and use that as an argument in apply_compression.py in helpers.py @cancelled (4/26/2026, 6:52:55 AM)
-☐ remember to change base_config.yaml when you create new configs with different backbones
+✔ remember to change base_config.yaml when you create new configs with different backbones @done (4/26/2026, 1:14:01 PM)
 ☐ backbones to try - 
     ☐ recommended backbones by gemini - MobileNetV3-large, ViT-Tiny or Small and EfficientNetV2-S
     ☐ recommended backbones by Rain - ResNet, Xception
+✔ update create_manifest.py to create manifests such that - baseline model is trained on raw real and raw fakes, the novel model is trained on quaduplets of raw reals, fingerprint removed fakes, compressed reals and compressed fingerprint removed fakes and both models are tested on compressed reals and compressed fingerprint removed fakes. @done (4/26/2026, 1:14:44 PM)
 ☐ 
