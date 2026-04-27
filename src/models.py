@@ -33,9 +33,7 @@ class CustomEfficientNetB0(nn.Module):
     def forward(self, x):
         features = self.network(x)
         embeddings = self.embedding_layer(features)
-        
-        # using sigmoid for classification probabilities
-        out = torch.sigmoid(self.classifier(embeddings))
+        out = self.classifier(embeddings)
         return out, embeddings
 
 class NovelSiameseWrapper(nn.Module):
@@ -48,7 +46,7 @@ class NovelSiameseWrapper(nn.Module):
 
     def forward(self, quadruplet):
 
-        # unpacking the stack: Fake_Raw, Fake_Comp, Real_Raw, Real_Comp
+        # unpacking the stack: fake_fpr, fake_fpr_compressed, real_raw, real_comp
         imgs = [quadruplet[:, i] for i in range(4)]
         
         # passing all four images through the same backbone object

@@ -37,8 +37,11 @@ class StandardDataset(Dataset):
         if self.transform:
             image = self.transform(image)
 
-        return image, torch.tensor(label, dtype=torch.float32)
+        # extract method for critical testing if present (not present in baseline train.csv)
+        method = row['method'] if 'method' in self.data.columns else 'None'
 
+        # return: image, label, and method
+        return image, torch.tensor(label, dtype=torch.float32), method
 class QuadrupletDataset(Dataset):
     """
     used for training the novel model

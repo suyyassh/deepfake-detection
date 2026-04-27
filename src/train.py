@@ -32,7 +32,9 @@ def setup_dirs(backbone):
 def train_one_epoch(model, loader, optimizer, criterion, device, is_novel=False):
     model.train()
     running_loss = 0.0
-    for imgs, labels in loader:
+
+    for batch in loader:
+        imgs, labels = batch[0], batch[1]
         imgs, labels = imgs.to(device), labels.to(device)
         optimizer.zero_grad()
         
@@ -67,7 +69,7 @@ def run_experiment(config_path):
     
     model_b = CustomEfficientNetB0(cfg).to(device)
     opt_b = optim.Adam(model_b.parameters(), lr=cfg['train']['learning_rate'])
-    crit_b = {'bce': nn.BCELoss()}
+    crit_b = {'bce': nn.BCEWithLogitsLoss()}
     
     weight_fn_b = f"baseline_{ts}.pth"
     log_path_b = os.path.join(paths['base_logs'], f"logs_{ts}.csv")
@@ -90,7 +92,7 @@ def run_experiment(config_path):
     backbone_n = CustomEfficientNetB0(cfg).to(device)
     model_n = NovelSiameseWrapper(backbone_n).to(device)
     opt_n = optim.Adam(model_n.parameters(), lr=cfg['train']['learning_rate'])
-    crit_n = {'bce': nn.BCELoss(), 'mse': nn.MSELoss()}
+    crit_n = {'bce': nn.BCEWithLogitsLoss(), 'mse': nn.MSELoss()}
     
     weight_fn_n = f"novel_{ts}.pth"
     log_path_n = os.path.join(paths['novel_logs'], f"logs_{ts}.csv")
@@ -100,7 +102,7 @@ def run_experiment(config_path):
         writer.writerow(["model", "datetime", "dataset", "weight_file", "epoch", "loss"])
         for epoch in range(cfg['train']['epochs']):
             loss = train_one_epoch(model_n, novel_loader, opt_n, crit_n, device, True)
-            writer.writerow(["baseline", ts, dataset_name, weight_fn_b, epoch + 1, f"{loss:.4f}"])
+            writer.writerow(["novel", ts, dataset_name, weight_fn_n, epoch + 1, f"{loss:.4f}"])
             print(f"Epoch {epoch+1} Loss: {loss:.4f}")
             
     torch.save(backbone_n.state_dict(), os.path.join(paths['novel_weights'], weight_fn_n))
