@@ -63,26 +63,26 @@ def run_experiment(config_path):
     paths, ts = setup_dirs(backbone_name)
 
     # training the baseline model
-    print(f"\n Update: training the baseline {backbone_name}")
-    base_ds = StandardDataset(f"data/manifests/{dataset_name}/baseline/train.csv", cfg)
-    base_loader = DataLoader(base_ds, batch_size=cfg['train']['batch_size'], shuffle=True)
+    # print(f"\n Update: training the baseline {backbone_name}")
+    # base_ds = StandardDataset(f"data/manifests/{dataset_name}/baseline/train.csv", cfg)
+    # base_loader = DataLoader(base_ds, batch_size=cfg['train']['batch_size'], shuffle=True)
     
-    model_b = CustomEfficientNetB0(cfg).to(device)
-    opt_b = optim.Adam(model_b.parameters(), lr=cfg['train']['learning_rate'])
-    crit_b = {'bce': nn.BCEWithLogitsLoss()}
+    # model_b = CustomEfficientNetB0(cfg).to(device)
+    # opt_b = optim.Adam(model_b.parameters(), lr=cfg['train']['learning_rate'])
+    # crit_b = {'bce': nn.BCEWithLogitsLoss()}
     
-    weight_fn_b = f"baseline_{ts}.pth"
-    log_path_b = os.path.join(paths['base_logs'], f"logs_{ts}.csv")
+    # weight_fn_b = f"baseline_{ts}.pth"
+    # log_path_b = os.path.join(paths['base_logs'], f"logs_{ts}.csv")
     
-    with open(log_path_b, 'w', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(["model", "datetime", "dataset", "weight_file", "epoch", "loss"])
-        for epoch in range(cfg['train']['epochs']):
-            loss = train_one_epoch(model_b, base_loader, opt_b, crit_b, device, False)
-            writer.writerow(["baseline", ts, dataset_name, weight_fn_b, epoch + 1, f"{loss:.4f}"])
-            print(f"Epoch {epoch+1} Loss: {loss:.4f}")
+    # with open(log_path_b, 'w', newline='') as f:
+    #     writer = csv.writer(f)
+    #     writer.writerow(["model", "datetime", "dataset", "weight_file", "epoch", "loss"])
+    #     for epoch in range(cfg['train']['epochs']):
+    #         loss = train_one_epoch(model_b, base_loader, opt_b, crit_b, device, False)
+    #         writer.writerow(["baseline", ts, dataset_name, weight_fn_b, epoch + 1, f"{loss:.4f}"])
+    #         print(f"Epoch {epoch+1} Loss: {loss:.4f}")
     
-    torch.save(model_b.state_dict(), os.path.join(paths['base_weights'], weight_fn_b))
+    # torch.save(model_b.state_dict(), os.path.join(paths['base_weights'], weight_fn_b))
 
     # training the novel model
     print(f"\n Update: training the novel {backbone_name}")
