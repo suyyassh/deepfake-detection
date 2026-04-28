@@ -40,10 +40,28 @@ def train_one_epoch(model, loader, optimizer, criterion, device, is_novel=False)
         
         if is_novel:
             results, embeddings = model(imgs)
+            # classification loss
             loss_bce = criterion['bce'](results.view(-1), labels.view(-1))
-            loss_inv_f = criterion['mse'](embeddings[:, 0], embeddings[:, 1])
-            loss_inv_r = criterion['mse'](embeddings[:, 2], embeddings[:, 3])
-            loss = loss_bce + loss_inv_f + loss_inv_r
+            
+            # pull loss
+            loss_pull_f = criterion['mse'](embeddings[:, 0], embeddings[:, 1]) # Fake raw vs comp
+            loss_pull_r = criterion['mse'](embeddings[:, 2], embeddings[:, 3]) # Real raw vs comp
+            loss_pull = loss_pull_f + loss_pull_r
+            
+            # push loss
+            margin = 1.0
+
+            # calculate euclidean distance between fakes and reals
+            dist_raw = torch.norm(embeddings[:, 0] - embeddings[:, 2], p=2, dim=1)  # Fake Raw vs Real Raw
+            dist_comp = torch.norm(embeddings[:, 1] - embeddings[:, 3], p=2, dim=1) # Fake Comp vs Real Comp
+            
+            # penalize if they are closer than the margin
+            loss_push = torch.relu(margin - dist_raw).mean() + torch.relu(margin - dist_comp).mean()
+            
+            # total weighted loss
+            lambda_pull = 1.0  # how hard to pull raw/comp together
+            lambda_push = 0.5  # how hard to push reals/fakes apart
+            loss = loss_bce + (lambda_pull * loss_pull) + (lambda_push * loss_push)
         else:
             preds, _ = model(imgs)
             loss = criterion['bce'](preds.view(-1), labels)
