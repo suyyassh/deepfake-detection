@@ -24,6 +24,13 @@ class StandardDataset(Dataset):
     """
     def __init__(self, manifest_path, config):
         self.data = pd.read_csv(manifest_path)
+
+        # -- slicing data for rapid experimentation -- 
+        frac = config['data'].get('train_fraction', 1.0)
+        if 'train' in manifest_path and frac < 1.0:
+            self.data = self.data.sample(frac=frac, random_state=42).reset_index(drop=True)
+            print(f"Update: Subsampling Standard dataset to {len(self.data)} rows.")
+
         self.transform = get_transforms(config)
 
     def __len__(self):
@@ -48,6 +55,13 @@ class QuadrupletDataset(Dataset):
     """
     def __init__(self, manifest_path, config):
         self.data = pd.read_csv(manifest_path)
+
+        # -- slicing data for rapid experimentation -- 
+        frac = config['data'].get('train_fraction', 1.0)
+        if 'train' in manifest_path and frac < 1.0:
+            self.data = self.data.sample(frac=frac, random_state=42).reset_index(drop=True)
+            print(f"Update: Subsampling Quadruplet dataset to {len(self.data)} rows.")
+
         self.transform = get_transforms(config)
 
     def __len__(self):
