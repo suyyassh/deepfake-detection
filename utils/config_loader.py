@@ -30,10 +30,10 @@ def validate_config(config):
         ('model', 'backbone', str),
         ('model', 'pretrained', bool),
         ('model', 'embedding_dim', int),
-        ('train', 'batch_size', int),
+        ('train', 'batch_size_base', int),
+        ('train', 'batch_size_novel', int),
         ('train', 'epochs', int),
         ('train', 'learning_rate', float),
-        ('train', 'weight_decay', float),
     ]
 
     for section, key, expected_type in schema:
