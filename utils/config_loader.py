@@ -1,3 +1,5 @@
+## not updated in this specific implementation
+
 # this script loads and validates the configuration
 
 import yaml
