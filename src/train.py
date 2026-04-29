@@ -48,7 +48,7 @@ class EarlyStopping:
             self.best_loss = val_loss
             self.counter = 0
 
-def train_one_epoch(model, loader, optimizer, criterion, device, is_novel=False):
+def train_one_epoch(model, loader, optimizer, criterion, device, epoch, cfg, is_novel=False):
     model.train()
     running_loss, running_bce, running_pull, running_push = 0.0, 0.0, 0.0, 0.0
 
@@ -74,9 +74,15 @@ def train_one_epoch(model, loader, optimizer, criterion, device, is_novel=False)
             dist_comp = torch.norm(embeddings[:, 1] - embeddings[:, 3], p=2, dim=1)
             loss_push = torch.relu(margin - dist_raw).mean() + torch.relu(margin - dist_comp).mean()
             
-            # total loss
-            lambda_pull = 0.1 
-            lambda_push = 0.1
+            # dynamic loss scheduling
+            warmup = cfg['train'].get('warmup_epochs', 3)
+            if epoch < warmup:
+                lambda_pull = 0.0 
+                lambda_push = 0.0
+            else:
+                lambda_pull = 0.1 
+                lambda_push = 0.1
+                
             loss = loss_bce + (lambda_pull * loss_pull) + (lambda_push * loss_push)
             
             # tracking components
@@ -95,7 +101,7 @@ def train_one_epoch(model, loader, optimizer, criterion, device, is_novel=False)
     n = len(loader)
     return running_loss / n, running_bce / n, running_pull / n, running_push / n
 
-def validate_one_epoch(model, loader, criterion, device, is_novel=False):
+def validate_one_epoch(model, loader, criterion, device, epoch, cfg, is_novel=False):
     model.eval()
     running_loss, running_bce, running_pull, running_push = 0.0, 0.0, 0.0, 0.0
 
@@ -118,9 +124,15 @@ def validate_one_epoch(model, loader, criterion, device, is_novel=False):
                 dist_comp = torch.norm(embeddings[:, 1] - embeddings[:, 3], p=2, dim=1)
                 loss_push = torch.relu(margin - dist_raw).mean() + torch.relu(margin - dist_comp).mean()
                 
-                # UPDATED LAMBDAS HERE
-                lambda_pull = 0.1 
-                lambda_push = 0.1
+                # dynamic loss scheduling
+                warmup = cfg['train'].get('warmup_epochs', 3)
+                if epoch < warmup:
+                    lambda_pull = 0.0 
+                    lambda_push = 0.0
+                else:
+                    lambda_pull = 0.1 
+                    lambda_push = 0.1
+                    
                 loss = loss_bce + (lambda_pull * loss_pull) + (lambda_push * loss_push)
                 
                 # track components
@@ -174,8 +186,8 @@ def run_experiment(config_path):
         writer.writerow(["model", "datetime", "dataset", "weight_file", "epoch", "train_loss", "val_loss"])
         
         for epoch in range(cfg['train']['epochs']):
-            train_loss, _, _, _ = train_one_epoch(model_b, base_loader, opt_b, crit_b, device, False)
-            val_loss, _, _, _ = validate_one_epoch(model_b, base_val_loader, crit_b, device, False)
+            train_loss, _, _, _ = train_one_epoch(model_b, base_loader, opt_b, crit_b, device, epoch, cfg, False)
+            val_loss, _, _, _ = validate_one_epoch(model_b, base_val_loader, crit_b, device, epoch, cfg, False)
             
             writer.writerow(["baseline", ts, dataset_name, weight_fn_b, epoch + 1, f"{train_loss:.4f}", f"{val_loss:.4f}"])
             print(f"Epoch {epoch+1} Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}")
@@ -202,7 +214,7 @@ def run_experiment(config_path):
     novel_val_loader = DataLoader(novel_val_ds, batch_size=cfg['train']['batch_size_novel'], shuffle=False)
     
     backbone_n = CustomEfficientNetB0(cfg).to(device)
-    model_n = NovelSiameseWrapper(backbone_n).to(device)
+    model_n = NovelSiameseWrapper(backbone_n, cfg).to(device)
     opt_n = optim.Adam(model_n.parameters(), lr=cfg['train']['learning_rate'])
     crit_n = {'bce': nn.BCEWithLogitsLoss(), 'mse': nn.MSELoss()}
     
@@ -223,8 +235,8 @@ def run_experiment(config_path):
         ])
         
         for epoch in range(cfg['train']['epochs']):
-            t_loss, t_bce, t_pull, t_push = train_one_epoch(model_n, novel_loader, opt_n, crit_n, device, True)
-            v_loss, v_bce, v_pull, v_push = validate_one_epoch(model_n, novel_val_loader, crit_n, device, True)
+            t_loss, t_bce, t_pull, t_push = train_one_epoch(model_n, novel_loader, opt_n, crit_n, device, epoch, cfg, True)
+            v_loss, v_bce, v_pull, v_push = validate_one_epoch(model_n, novel_val_loader, crit_n, device, epoch, cfg, True)
             
             writer.writerow([
                 "novel", ts, dataset_name, weight_fn_n, epoch + 1, 

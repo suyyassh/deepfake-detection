@@ -17,4 +17,5 @@ train:
  batch_size_base: 64
  batch_size_novel: 16
  epochs: 10
+ warmup_epochs: 3
  learning_rate: 0.001
