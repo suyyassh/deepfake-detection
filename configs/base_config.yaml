@@ -16,5 +16,5 @@ model:
 train:
  batch_size_base: 64
  batch_size_novel: 16
- epochs: 30
+ epochs: 10
  learning_rate: 0.001
