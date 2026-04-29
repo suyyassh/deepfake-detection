@@ -6,4 +6,3 @@
     ☐ recommended backbones by gemini - MobileNetV3-large, ViT-Tiny or Small and EfficientNetV2-S
     ☐ recommended backbones by Rain - ResNet, Xception
 ✔ update create_manifest.py to create manifests such that - baseline model is trained on raw real and raw fakes, the novel model is trained on quaduplets of raw reals, fingerprint removed fakes, compressed reals and compressed fingerprint removed fakes and both models are tested on compressed reals and compressed fingerprint removed fakes. @done (4/26/2026, 1:14:44 PM)
-☐ 
