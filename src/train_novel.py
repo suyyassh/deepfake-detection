@@ -4,6 +4,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 import os
 import csv
+import sys
 from datetime import datetime
 
 from .dataset import QuadrupletDataset
@@ -23,17 +24,30 @@ def setup_dirs(backbone):
 
 def train_one_epoch(model, loader, optimizer, criterion, device, epoch, cfg):
     model.train()
+    model.backbone.eval()
     running_loss, running_bce, running_pull, running_push = 0.0, 0.0, 0.0, 0.0
     
-    warmup = cfg['train'].get('warmup_epochs', 3)
-    l_pull = 0.1 if epoch >= warmup else 0.0
-    l_push = 0.1 if epoch >= warmup else 0.0
+    l_pull = 0.1 
+    l_push = 0.1
 
-    for batch in loader:
+    for i, batch in enumerate(loader): # added 'i' for quick check ln38
         imgs, labels = batch[0].to(device), batch[1].to(device)
         optimizer.zero_grad()
         
         results, embeddings = model(imgs)
+
+        # quick check ---
+        if i == 0: 
+            print("\n" + "="*30)
+            print("DIAGNOSTIC: FIRST BATCH DATA")
+            # results.view(-1) are the raw logits
+            print(f"Logits (Predictions): {results.view(-1)[:8].detach().cpu().numpy()}")
+            print(f"Labels (Targets):     {labels.view(-1)[:8].cpu().numpy()}")
+            print(f"Results Shape: {results.view(-1).shape}")
+            print(f"Labels Shape:  {labels.view(-1).shape}")
+            print("="*30 + "\n")
+            #sys.exit() # stop immediately after printing
+        # quick check ends ---
         
         loss_bce = criterion['bce'](results.view(-1), labels.view(-1).float())
         loss_pull = criterion['mse'](embeddings[:, 0], embeddings[:, 1]) + \
@@ -64,9 +78,8 @@ def validate_one_epoch(model, loader, criterion, device, epoch, cfg):
     model.eval()
     running_loss, running_bce, running_pull, running_push = 0.0, 0.0, 0.0, 0.0
     
-    warmup = cfg['train'].get('warmup_epochs', 3)
-    l_pull = 0.1 if epoch >= warmup else 0.0
-    l_push = 0.1 if epoch >= warmup else 0.0
+    l_pull = 0.1 
+    l_push = 0.1
 
     with torch.no_grad():
         for batch in loader:
@@ -105,10 +118,14 @@ def run_experiment():
     baseline_path = "results/training/weights/efficientnet_b0/baseline/baseline_20260429_044124.pth"
     
     if os.path.exists(baseline_path):
-        print(f"Success: Loading baseline weights from {baseline_path}")
+        print(f"Success: Loading baseline weights...")
         backbone.load_state_dict(torch.load(baseline_path))
+        
+        # NEW: Freeze the backbone
+        for param in backbone.parameters():
+            param.requires_grad = False
     else:
-        print("Warning: Baseline weights not found! Training from scratch.")
+        print("Warning: Training from scratch.")
 
     model = NovelSiameseWrapper(backbone, cfg).to(device)
 
@@ -131,6 +148,11 @@ def run_experiment():
         writer.writerow(["epoch", "t_loss", "t_bce", "v_loss", "v_bce", "v_pull", "v_push"])
 
         for epoch in range(cfg['train']['epochs']):
+            warmup = cfg['train'].get('warmup_epochs', 3)
+            if epoch == warmup:
+                print("Update: Unfreezing backbone for full fine-tuning...")
+                for param in backbone.parameters():
+                    param.requires_grad = True
             t_loss, t_bce, t_pull, t_push = train_one_epoch(model, train_loader, optimizer, criterion, device, epoch, cfg)
             v_loss, v_bce, v_pull, v_push = validate_one_epoch(model, val_loader, criterion, device, epoch, cfg)
 

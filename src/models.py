@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 from torchvision import models
 
@@ -27,10 +26,8 @@ class NovelSiameseWrapper(nn.Module):
         super(NovelSiameseWrapper, self).__init__()
         self.backbone = backbone
         
-        # pull the dimension from your config
         proj_dim = config['model']['embedding_dim']
         
-        # custom projection head for the contrastive Push/Pull loss
         self.projection_head = nn.Sequential(
             nn.Linear(self.backbone.in_features, 512),
             nn.ReLU(),
@@ -38,15 +35,21 @@ class NovelSiameseWrapper(nn.Module):
         )
 
     def forward(self, quadruplet):
-        # unpacking the stack: fake_raw, fake_comp, real_raw, real_comp
-        imgs = [quadruplet[:, i] for i in range(4)]
+        # quadruplet shape: [batch_size, 4, 3, 256, 256]
+        batch_size = quadruplet.size(0)
         
-        outputs = [self.backbone(img) for img in imgs]
+        # CRITICAL FIX: Fold the 4 images into the batch dimension
+        # Shape becomes: [batch_size * 4, 3, 256, 256] -> e.g., 64 images
+        flat_imgs = quadruplet.reshape(-1, 3, quadruplet.size(3), quadruplet.size(4))
         
-        # stack the BCE classifications [batch, 4, 1]
-        results = torch.stack([o[0] for o in outputs], dim=1) 
+        # Pass all 64 images through the backbone simultaneously (Stable BatchNorm!)
+        flat_results, flat_features = self.backbone(flat_imgs)
         
-        # pass the 1280D features through the projection head
-        embeddings = torch.stack([self.projection_head(o[1]) for o in outputs], dim=1) 
+        # Pass features through projection head
+        flat_embeddings = self.projection_head(flat_features)
+        
+        # Unfold the results back into the Siamese shape: [batch_size, 4, ...]
+        results = flat_results.view(batch_size, 4, 1)
+        embeddings = flat_embeddings.view(batch_size, 4, -1)
         
         return results, embeddings
