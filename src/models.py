@@ -1,4 +1,5 @@
 import torch.nn as nn
+import timm
 from torchvision import models
 
 class CustomEfficientNetB0(nn.Module):
@@ -20,6 +21,27 @@ class CustomEfficientNetB0(nn.Module):
         features = self.network(x)
         out = self.classifier(features)
         return out, features
+
+class UniversalBackbone(nn.Module):
+    def __init__(self, cfg):
+        super(UniversalBackbone, self).__init__()
+        backbone_name = cfg['model']['backbone']
+        
+        # 1. Load the pre-trained model as a pure feature extractor
+        self.model = timm.create_model(backbone_name, pretrained=True, num_classes=0)
+        
+        # 2. Find out the feature dimension dynamically AND SAVE IT
+        # CHANGE HERE: Added self.
+        self.in_features = self.model.num_features 
+        
+        # 3. Create your custom classification head
+        # CHANGE HERE: Use self.in_features
+        self.fc = nn.Linear(self.in_features, 1) 
+
+    def forward(self, x):
+        features = self.model(x)  # Extract the raw embeddings
+        logits = self.fc(features) # Get the fake/real prediction
+        return logits, features
 
 class NovelSiameseWrapper(nn.Module):
     def __init__(self, backbone, config):

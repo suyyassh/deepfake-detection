@@ -6,7 +6,7 @@ from sklearn.metrics import classification_report, roc_auc_score, accuracy_score
 from torch.utils.data import DataLoader
 
 from src.dataset import StandardDataset
-from src.models import CustomEfficientNetB0
+from src.models import UniversalBackbone
 from utils.config_loader import load_config
 
 def evaluate_and_log(model_type, weight_path, test_csv, set_name, cfg, device):
@@ -15,7 +15,7 @@ def evaluate_and_log(model_type, weight_path, test_csv, set_name, cfg, device):
     """
     
     # initialise the model 
-    model = CustomEfficientNetB0(cfg).to(device)
+    model = UniversalBackbone(cfg).to(device)
     model.load_state_dict(torch.load(weight_path, map_location=device))
     model.train()
 
@@ -137,7 +137,7 @@ def run_evaluation(config_path, baseline_weight, novel_weight):
     print(f"Success: logs saved to {log_file}")
 
 if __name__ == "__main__":    
-    B_WEIGHT = "results/training/weights/efficientnet_b0/baseline/baseline_20260429_044124.pth"
-    N_WEIGHT = "results/training/weights/efficientnet_b0/novel_stabilized/novel_stabilized_20260429_111135.pth"
+    B_WEIGHT = "results/training/weights/xception/baseline/baseline_20260504_121322.pth"
+    N_WEIGHT = "results/training/weights/xception/novel/novel_20260504_222640.pth"
     
     run_evaluation("configs/base_config.yaml", B_WEIGHT, N_WEIGHT)

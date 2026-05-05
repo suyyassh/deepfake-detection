@@ -8,7 +8,7 @@ import sys
 from datetime import datetime
 
 from .dataset import QuadrupletDataset
-from .models import CustomEfficientNetB0, NovelSiameseWrapper
+from .models import UniversalBackbone, NovelSiameseWrapper
 from utils.config_loader import load_config
 
 def setup_dirs(backbone):
@@ -111,7 +111,7 @@ def run_experiment():
     paths, ts = setup_dirs(cfg['model']['backbone'])
 
     # 1. Initialize Model & Load Baseline Weights
-    backbone = CustomEfficientNetB0(cfg).to(device)
+    backbone = UniversalBackbone(cfg).to(device)
     
     # FIND YOUR BEST BASELINE WEIGHT FILENAME IN: results/training/weights/efficientnet_b0/baseline/
     # Replace the path below with your actual successful baseline .pth file
