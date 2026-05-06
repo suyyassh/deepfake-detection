@@ -137,7 +137,7 @@ def run_evaluation(config_path, baseline_weight, novel_weight):
     print(f"Success: logs saved to {log_file}")
 
 if __name__ == "__main__":    
-    B_WEIGHT = "results/training/weights/xception/baseline/baseline_20260504_121322.pth"
-    N_WEIGHT = "results/training/weights/xception/novel/novel_20260504_222640.pth"
+    B_WEIGHT = "results/training/weights/densenet121/baseline/baseline_20260505_231050.pth"
+    N_WEIGHT = "results/training/weights/densenet121/novel/novel_20260505_231050.pth"
     
     run_evaluation("configs/base_config.yaml", B_WEIGHT, N_WEIGHT)
