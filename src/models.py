@@ -1,59 +1,77 @@
-import torch
 import torch.nn as nn
+import timm
 from torchvision import models
 
 class CustomEfficientNetB0(nn.Module):
-    """
-    blueprint for efficientnet_b0
-    """
     def __init__(self, config):
         super(CustomEfficientNetB0, self).__init__()
-
-        # Pull values from config
-        embedding_dim = config['model']['embedding_dim']
         pretrained = config['model']['pretrained']
         
         # loading the backbone
         self.network = models.efficientnet_b0(weights='DEFAULT' if pretrained else None)
         
-        # extracting features from the original classifier and then removing it
-        in_features = self.network.classifier[1].in_features
+        # extract the 1280 feature dimension and remove the default classifier
+        self.in_features = self.network.classifier[1].in_features
         self.network.classifier = nn.Identity()
         
-        # custom projection head
-        self.embedding_layer = nn.Sequential(
-            nn.Linear(in_features, 512),
-            nn.ReLU(),
-            nn.Linear(512, embedding_dim)
-        )
-        
-        # classification head
-        self.classifier = nn.Linear(embedding_dim, 1)
+        # classification head now sits directly on the robust 1280D features
+        self.classifier = nn.Linear(self.in_features, 1)
 
     def forward(self, x):
         features = self.network(x)
-        embeddings = self.embedding_layer(features)
-        out = self.classifier(embeddings)
-        return out, embeddings
+        out = self.classifier(features)
+        return out, features
+
+class UniversalBackbone(nn.Module):
+    def __init__(self, cfg):
+        super(UniversalBackbone, self).__init__()
+        backbone_name = cfg['model']['backbone']
+        
+        # 1. Load the pre-trained model as a pure feature extractor
+        self.model = timm.create_model(backbone_name, pretrained=True, num_classes=0)
+        
+        # 2. Find out the feature dimension dynamically AND SAVE IT
+        # CHANGE HERE: Added self.
+        self.in_features = self.model.num_features 
+        
+        # 3. Create your custom classification head
+        # CHANGE HERE: Use self.in_features
+        self.fc = nn.Linear(self.in_features, 1) 
+
+    def forward(self, x):
+        features = self.model(x)  # Extract the raw embeddings
+        logits = self.fc(features) # Get the fake/real prediction
+        return logits, features
 
 class NovelSiameseWrapper(nn.Module):
-    """
-    the orchestrator for the novel model
-    """
-    def __init__(self, backbone):
+    def __init__(self, backbone, config):
         super(NovelSiameseWrapper, self).__init__()
         self.backbone = backbone
+        
+        proj_dim = config['model']['embedding_dim']
+        
+        self.projection_head = nn.Sequential(
+            nn.Linear(self.backbone.in_features, 512),
+            nn.ReLU(),
+            nn.Linear(512, proj_dim)
+        )
 
     def forward(self, quadruplet):
-
-        # unpacking the stack: fake_fpr, fake_fpr_compressed, real_raw, real_comp
-        imgs = [quadruplet[:, i] for i in range(4)]
+        # quadruplet shape: [batch_size, 4, 3, 256, 256]
+        batch_size = quadruplet.size(0)
         
-        # passing all four images through the same backbone object
-        outputs = [self.backbone(img) for img in imgs]
+        # CRITICAL FIX: Fold the 4 images into the batch dimension
+        # Shape becomes: [batch_size * 4, 3, 256, 256] -> e.g., 64 images
+        flat_imgs = quadruplet.reshape(-1, 3, quadruplet.size(3), quadruplet.size(4))
         
-        # separating the results (classification) and embeddings (contrastive learning)
-        results = torch.stack([o[0] for o in outputs], dim=1) # [batch, 4, 1]
-        embeddings = torch.stack([o[1] for o in outputs], dim=1) # [batch, 4, 128]
+        # Pass all 64 images through the backbone simultaneously (Stable BatchNorm!)
+        flat_results, flat_features = self.backbone(flat_imgs)
+        
+        # Pass features through projection head
+        flat_embeddings = self.projection_head(flat_features)
+        
+        # Unfold the results back into the Siamese shape: [batch_size, 4, ...]
+        results = flat_results.view(batch_size, 4, 1)
+        embeddings = flat_embeddings.view(batch_size, 4, -1)
         
         return results, embeddings

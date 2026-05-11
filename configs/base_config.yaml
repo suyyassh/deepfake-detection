@@ -5,14 +5,16 @@ data:
  raw_dir: "data/raw/faceforensics++"
  img_size: 256
  num_workers: 4
+ train_fraction: 0.4
 
 model:
- backbone: "efficientnet_b0"
+ backbone: "densenet121"
  pretrained: true
  embedding_dim: 128
 
 train:
- batch_size_base: 64
- batch_size_novel: 16
- epochs: 30
- learning_rate: 0.001
+ batch_size_base: 32
+ batch_size_novel: 8
+ epochs: 10
+ warmup_epochs: 3
+ learning_rate: 0.0001
