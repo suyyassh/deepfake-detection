@@ -1,26 +1,5 @@
 import torch.nn as nn
 import timm
-from torchvision import models
-
-class CustomEfficientNetB0(nn.Module):
-    def __init__(self, config):
-        super(CustomEfficientNetB0, self).__init__()
-        pretrained = config['model']['pretrained']
-        
-        # loading the backbone
-        self.network = models.efficientnet_b0(weights='DEFAULT' if pretrained else None)
-        
-        # extract the 1280 feature dimension and remove the default classifier
-        self.in_features = self.network.classifier[1].in_features
-        self.network.classifier = nn.Identity()
-        
-        # classification head now sits directly on the robust 1280D features
-        self.classifier = nn.Linear(self.in_features, 1)
-
-    def forward(self, x):
-        features = self.network(x)
-        out = self.classifier(features)
-        return out, features
 
 class UniversalBackbone(nn.Module):
     def __init__(self, cfg):

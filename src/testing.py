@@ -1,29 +1,27 @@
-# updates the weights before executing!!
-
 import torch
 import os
-import csv
 import pandas as pd
 from datetime import datetime
 from sklearn.metrics import classification_report, roc_auc_score, accuracy_score
 from torch.utils.data import DataLoader
 
-from .dataset import StandardDataset
-from .models import CustomEfficientNetB0
+from src.dataset import StandardDataset
+from src.models import UniversalBackbone
 from utils.config_loader import load_config
 
 def evaluate_and_log(model_type, weight_path, test_csv, set_name, cfg, device):
     """
-    runs inference and returns key aggregate and method-specific metrics
+    runs inference on a specific test set and returns key aggregate and method-specific metrics.
     """
-    # initialise and load the model
-    model = CustomEfficientNetB0(cfg).to(device)
+    
+    # initialise the model 
+    model = UniversalBackbone(cfg).to(device)
     model.load_state_dict(torch.load(weight_path, map_location=device))
     model.eval()
 
-    # setup data
+    # setup the standard dataset
     ds = StandardDataset(test_csv, cfg)
-    loader = DataLoader(ds, batch_size=cfg['train']['batch_size'], shuffle=False)
+    loader = DataLoader(ds, batch_size=cfg['train']['batch_size_base'], shuffle=False)
 
     all_preds = []
     all_labels = []
@@ -32,22 +30,26 @@ def evaluate_and_log(model_type, weight_path, test_csv, set_name, cfg, device):
     # inference loop
     with torch.no_grad():
         for batch in loader:
-            imgs, labels, methods = batch[0], batch[1], batch[2]
-            imgs = imgs.to(device)
+            imgs, labels, methods = batch[0].to(device), batch[1], batch[2]
+            
+            # forward pass
             outputs, _ = model(imgs)
 
-            # efficient net outputs probability via sigmoid
-            all_preds.extend(outputs.cpu().view(-1).tolist())
+            # convert logits to probabilities
+            probs = torch.sigmoid(outputs)
+            
+            all_preds.extend(probs.cpu().view(-1).tolist())
             all_labels.extend(labels.tolist())
             all_methods.extend(methods)
 
     # calculate aggregate metrics
     binary_preds = [1 if p > 0.5 else 0 for p in all_preds]
+    
     acc = accuracy_score(all_labels, binary_preds)
     auc = roc_auc_score(all_labels, all_preds)
     report = classification_report(all_labels, binary_preds, output_dict=True, zero_division=0)
     
-    # base dictionary
+    # build base metrics dict
     metrics = {
         "model": model_type,
         "datetime": None,
@@ -59,7 +61,7 @@ def evaluate_and_log(model_type, weight_path, test_csv, set_name, cfg, device):
         "weight_file": os.path.basename(weight_path)
     }
 
-    # calculate accuracy by method for deep evaluation
+    # calculate accuracy
     df_eval = pd.DataFrame({
         'label': all_labels, 
         'pred': binary_preds, 
@@ -68,9 +70,10 @@ def evaluate_and_log(model_type, weight_path, test_csv, set_name, cfg, device):
     
     for method in df_eval['method'].unique():
         method_data = df_eval[df_eval['method'] == method]
-        method_acc = accuracy_score(method_data['label'], method_data['pred'])
-        # add to metrics dictionary dynamically (e.g., "acc_Deepfakes", "acc_Real")
-        metrics[f"acc_{method}"] = round(method_acc, 4)
+        # prevent division by 0
+        if len(method_data) > 0:
+            method_acc = accuracy_score(method_data['label'], method_data['pred'])
+            metrics[f"acc_{method}"] = round(method_acc, 4)
 
     return metrics
 
@@ -80,48 +83,61 @@ def run_evaluation(config_path, baseline_weight, novel_weight):
     backbone = cfg['model']['backbone']
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     
-    # define test sets
     dataset_name = cfg['data']['dataset']
+    
+    # Verify these paths match your actual directory structure!
     test_sets = {
-        "Set_C_RAW": f"data/manifests/{dataset_name}/test/test_raw.csv",
-        "Set_D_COMP": f"data/manifests/{dataset_name}/test/test_compressed.csv"
+        "RAW": f"data/manifests/{dataset_name}/test/test_raw.csv",
+        "Compressed": f"data/manifests/{dataset_name}/test/test_compressed.csv"
     }
 
     results_table = []
 
-    # evaluating both models on both sets
-    for m_type, w_path in [("baseline", baseline_weight), ("novel", novel_weight)]:
+    print("Update: starting evaluation pipeline")
+
+    # evaluate both models on both test sets
+    for m_type, w_path in [("Baseline", baseline_weight), ("Novel", novel_weight)]:
+        if not os.path.exists(w_path):
+            print(f"Error: could not find weight file for {m_type}: {w_path}")
+            continue
+            
         for s_name, s_path in test_sets.items():
-            print(f"Evaluating {m_type} on {s_name}...")
+            print(f"Update: evaluating {m_type} model on {s_name} images")
             metrics = evaluate_and_log(m_type, w_path, s_path, s_name, cfg, device)
             metrics["datetime"] = ts
             results_table.append(metrics)
 
-    # saving logs
+    if not results_table:
+        print("Update: evaluation failed, please check file paths")
+        return
+
+    # saving to csv
     log_dir = os.path.join("results", "testing", "logs", backbone)
     os.makedirs(log_dir, exist_ok=True)
     log_file = os.path.join(log_dir, f"test_results_{ts}.csv")
     
     df = pd.DataFrame(results_table)
-    # Ensure standard columns are first, followed by dynamically generated method columns
+    
+    # ordering the columns
     cols = ['model', 'test_set', 'accuracy', 'f1_score', 'auc']
     method_cols = [c for c in df.columns if c.startswith('acc_')]
     final_cols = cols + method_cols + ['dataset', 'weight_file', 'datetime']
-    df = df[final_cols]
+    df = df[[c for c in final_cols if c in df.columns]] 
     
     df.to_csv(log_file, index=False)
     
-    # print results
-    print(f"\n Evaluation Results for {backbone}")
-    print("\n Aggregate Metrics:")
-    print(df[['model', 'test_set', 'accuracy', 'f1_score', 'auc']].to_string(index=False))
-    print("\n Method Breakdown (Accuracy):")
-    # dynamically print the method breakdown columns
+    # Print the final thesis table
+    print(f"Final Evaluation Results ({backbone})")
+    print("\n Aggregate Metrics ")
+    print(df[['model', 'test_set', 'accuracy', 'auc']].to_string(index=False))
+    
+    print("\n Method Breakdown (Accuracy)")
     print(df[['model', 'test_set'] + method_cols].to_string(index=False))
-    print(f"\nUpdate: logs saved to {log_file}")
+    
+    print(f"Success: logs saved to {log_file}")
 
-if __name__ == "__main__":
-    B_WEIGHT = ""
-    N_WEIGHT = ""
+if __name__ == "__main__":    
+    B_WEIGHT = "results/training/weights/efficientnet_b0/baseline/baseline_20260511_140642.pth"
+    N_WEIGHT = "results/training/weights/efficientnet_b0/novel/novel_20260512_094344.pth"
     
     run_evaluation("configs/base_config.yaml", B_WEIGHT, N_WEIGHT)

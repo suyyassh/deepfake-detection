@@ -84,8 +84,8 @@ def train_one_epoch(model, loader, optimizer, criterion, device, epoch, cfg, is_
                 lambda_pull = 0.0 
                 lambda_push = 0.0
             else:
-                lambda_pull = 0.1 
-                lambda_push = 0.1
+                lambda_pull = 0.01 
+                lambda_push = 0.01
                 
             loss = loss_bce + (lambda_pull * loss_pull) + (lambda_push * loss_push)
             
@@ -134,8 +134,8 @@ def validate_one_epoch(model, loader, criterion, device, epoch, cfg, is_novel=Fa
                     lambda_pull = 0.0 
                     lambda_push = 0.0
                 else:
-                    lambda_pull = 0.1 
-                    lambda_push = 0.1
+                    lambda_pull = 0.01 
+                    lambda_push = 0.01
                     
                 loss = loss_bce + (lambda_pull * loss_pull) + (lambda_push * loss_push)
                 
@@ -163,48 +163,48 @@ def run_experiment(config_path):
     paths, ts = setup_dirs(backbone_name)
 
     # training the baseline model
-    print(f"\n Update: training the baseline {backbone_name}")
+    # print(f"\n Update: training the baseline {backbone_name}")
 
-    # loading the training data
-    base_ds = StandardDataset(f"data/manifests/{dataset_name}/baseline/train.csv", cfg)
-    base_loader = DataLoader(base_ds, batch_size=cfg['train']['batch_size_base'], shuffle=True)
+    # # loading the training data
+    # base_ds = StandardDataset(f"data/manifests/{dataset_name}/baseline/train.csv", cfg)
+    # base_loader = DataLoader(base_ds, batch_size=cfg['train']['batch_size_base'], shuffle=True)
     
-    # loading the validation data
-    base_val_ds = StandardDataset(f"data/manifests/{dataset_name}/baseline/val.csv", cfg)
-    base_val_loader = DataLoader(base_val_ds, batch_size=cfg['train']['batch_size_base'], shuffle=False)
+    # # loading the validation data
+    # base_val_ds = StandardDataset(f"data/manifests/{dataset_name}/baseline/val.csv", cfg)
+    # base_val_loader = DataLoader(base_val_ds, batch_size=cfg['train']['batch_size_base'], shuffle=False)
     
-    model_b = UniversalBackbone(cfg).to(device)
-    opt_b = optim.Adam(model_b.parameters(), lr=cfg['train']['learning_rate'])
-    crit_b = {'bce': nn.BCEWithLogitsLoss()}
+    # model_b = UniversalBackbone(cfg).to(device)
+    # opt_b = optim.Adam(model_b.parameters(), lr=cfg['train']['learning_rate'])
+    # crit_b = {'bce': nn.BCEWithLogitsLoss()}
     
-    weight_fn_b = f"baseline_{ts}.pth"
-    log_path_b = os.path.join(paths['base_logs'], f"logs_{ts}.csv")
+    # weight_fn_b = f"baseline_{ts}.pth"
+    # log_path_b = os.path.join(paths['base_logs'], f"logs_{ts}.csv")
     
-    # adding early stopping
-    early_stopper_b = EarlyStopping(patience=3)
-    best_val_loss_b = float('inf')
+    # # adding early stopping
+    # early_stopper_b = EarlyStopping(patience=3)
+    # best_val_loss_b = float('inf')
     
-    # creating logs and saving weights
-    with open(log_path_b, 'w', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(["model", "datetime", "dataset", "weight_file", "epoch", "train_loss", "val_loss"])
+    # # creating logs and saving weights
+    # with open(log_path_b, 'w', newline='') as f:
+    #     writer = csv.writer(f)
+    #     writer.writerow(["model", "datetime", "dataset", "weight_file", "epoch", "train_loss", "val_loss"])
         
-        for epoch in range(cfg['train']['epochs']):
-            train_loss, _, _, _ = train_one_epoch(model_b, base_loader, opt_b, crit_b, device, epoch, cfg, False)
-            val_loss, _, _, _ = validate_one_epoch(model_b, base_val_loader, crit_b, device, epoch, cfg, False)
+    #     for epoch in range(cfg['train']['epochs']):
+    #         train_loss, _, _, _ = train_one_epoch(model_b, base_loader, opt_b, crit_b, device, epoch, cfg, False)
+    #         val_loss, _, _, _ = validate_one_epoch(model_b, base_val_loader, crit_b, device, epoch, cfg, False)
             
-            writer.writerow(["baseline", ts, dataset_name, weight_fn_b, epoch + 1, f"{train_loss:.4f}", f"{val_loss:.4f}"])
-            print(f"Epoch {epoch+1} Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}")
+    #         writer.writerow(["baseline", ts, dataset_name, weight_fn_b, epoch + 1, f"{train_loss:.4f}", f"{val_loss:.4f}"])
+    #         print(f"Epoch {epoch+1} Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}")
             
-            # checkpoint only if the validation loss improves
-            if val_loss < best_val_loss_b:
-                best_val_loss_b = val_loss
-                torch.save(model_b.state_dict(), os.path.join(paths['base_weights'], weight_fn_b))
+    #         # checkpoint only if the validation loss improves
+    #         if val_loss < best_val_loss_b:
+    #             best_val_loss_b = val_loss
+    #             torch.save(model_b.state_dict(), os.path.join(paths['base_weights'], weight_fn_b))
                 
-            early_stopper_b(val_loss)
-            if early_stopper_b.early_stop:
-                print("Update: early stopping triggered for Baseline model.")
-                break
+    #         early_stopper_b(val_loss)
+    #         if early_stopper_b.early_stop:
+    #             print("Update: early stopping triggered for Baseline model.")
+    #             break
 
     # training the novel model
     print(f"\n Update: training the novel {backbone_name}")

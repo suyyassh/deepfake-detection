@@ -8,13 +8,13 @@ data:
  train_fraction: 0.4
 
 model:
- backbone: "densenet121"
+ backbone: "efficientnet_b0"
  pretrained: true
  embedding_dim: 128
 
 train:
- batch_size_base: 32
- batch_size_novel: 8
- epochs: 10
+ batch_size_base: 62
+ batch_size_novel: 16
+ epochs: 30
  warmup_epochs: 3
  learning_rate: 0.0001
