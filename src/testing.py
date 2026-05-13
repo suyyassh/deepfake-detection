@@ -16,7 +16,7 @@ def evaluate_and_log(model_type, weight_path, test_csv, set_name, cfg, device):
     
     # initialise the model 
     model = UniversalBackbone(cfg).to(device)
-    model.load_state_dict(torch.load(weight_path, map_location=device))
+    model.load_state_dict(torch.load(weight_path, map_location=device, weights_only=True))
     model.eval()
 
     # setup the standard dataset
@@ -137,7 +137,7 @@ def run_evaluation(config_path, baseline_weight, novel_weight):
     print(f"Success: logs saved to {log_file}")
 
 if __name__ == "__main__":    
-    B_WEIGHT = "results/training/weights/efficientnet_b0/baseline/baseline_20260511_140642.pth"
-    N_WEIGHT = "results/training/weights/efficientnet_b0/novel/novel_20260512_094344.pth"
+    B_WEIGHT = "results/training/weights/efficientnet_b0/baseline/baseline_20260512_160927.pth"
+    N_WEIGHT = "results/training/weights/efficientnet_b0/novel/novel_20260512_160927.pth"
     
     run_evaluation("configs/base_config.yaml", B_WEIGHT, N_WEIGHT)
