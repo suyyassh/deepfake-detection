@@ -30,7 +30,7 @@ def setup_dirs(backbone):
     return paths, timestamp
 
 class EarlyStopping:
-    def __init__(self, patience=3, min_delta=0):
+    def __init__(self, patience=7, min_delta=0):
         self.patience = patience
         self.min_delta = min_delta
         self.counter = 0
@@ -83,11 +83,11 @@ def train_one_epoch(model, loader, optimizer, criterion, device, epoch, cfg, is_
             # dynamic loss scheduling
             warmup = cfg['train'].get('warmup_epochs', 3)
             if epoch < warmup:
-                lambda_pull = 0.0 
+                lambda_pull = 0.0
                 lambda_push = 0.0
             else:
-                lambda_pull = 0.01 
-                lambda_push = 0.01
+                lambda_pull = 0.1
+                lambda_push = 0.1
                 
             loss = loss_bce + (lambda_pull * loss_pull) + (lambda_push * loss_push)
             
@@ -133,11 +133,11 @@ def validate_one_epoch(model, loader, criterion, device, epoch, cfg, is_novel=Fa
                 # dynamic loss scheduling
                 warmup = cfg['train'].get('warmup_epochs', 3)
                 if epoch < warmup:
-                    lambda_pull = 0.0 
+                    lambda_pull = 0.0
                     lambda_push = 0.0
                 else:
-                    lambda_pull = 0.01 
-                    lambda_push = 0.01
+                    lambda_pull = 0.1
+                    lambda_push = 0.1
                     
                 loss = loss_bce + (lambda_pull * loss_pull) + (lambda_push * loss_push)
                 
@@ -183,7 +183,7 @@ def run_experiment(config_path):
     log_path_b = os.path.join(paths['base_logs'], f"logs_{ts}.csv")
     
     # adding early stopping
-    early_stopper_b = EarlyStopping(patience=3)
+    early_stopper_b = EarlyStopping(patience=7)
     best_val_loss_b = float('inf')
     
     # creating logs and saving weights
@@ -219,10 +219,20 @@ def run_experiment(config_path):
     novel_val_ds = QuadrupletDataset(f"data/manifests/{dataset_name}/novel/val.csv", cfg)
     novel_val_loader = DataLoader(novel_val_ds, batch_size=cfg['train']['batch_size_novel'], shuffle=False)
     
+    # initialise backbone and load baseline weights
     backbone_n = UniversalBackbone(cfg).to(device)
     model_n = NovelSiameseWrapper(backbone_n, cfg).to(device)
 
-    for param in backbone_n.model.parameters():
+    baseline_path = os.path.join(paths['base_weights'], weight_fn_b)
+    backbone_n.load_state_dict(torch.load(baseline_path, weights_only=True))
+
+    # diagnostic: verify baseline weights loaded correctly into fc
+    fc_weight_norm = backbone_n.fc.weight.norm().item()
+    fc_bias = backbone_n.fc.bias.item()
+    print(f"Update: novel backbone initialised — fc weight norm: {fc_weight_norm:.4f}, fc bias: {fc_bias:.4f}")
+
+    # freeze entire backbone (feature extractor + fc) during warmup
+    for param in backbone_n.parameters():
         param.requires_grad = False
 
     opt_n = optim.Adam(model_n.parameters(), lr=cfg['train']['learning_rate'])
@@ -232,7 +242,7 @@ def run_experiment(config_path):
     log_path_n = os.path.join(paths['novel_logs'], f"logs_{ts}.csv")
 
     # adding early stopping
-    early_stopper_n = EarlyStopping(patience=3)
+    early_stopper_n = EarlyStopping(patience=7)
     best_val_loss_n = float('inf')
     
     # creating logs and saving weights
@@ -249,7 +259,8 @@ def run_experiment(config_path):
             warmup = cfg['train'].get('warmup_epochs', 3)
             if epoch == warmup:
                 print("Update: Unfreezing backbone for full fine-tuning...")
-                for param in backbone_n.model.parameters():
+                # unfreeze entire backbone (feature extractor + fc)
+                for param in backbone_n.parameters():
                     param.requires_grad = True
 
             t_loss, t_bce, t_pull, t_push = train_one_epoch(model_n, novel_loader, opt_n, crit_n, device, epoch, cfg, True)
