@@ -1,5 +1,0 @@
-model,test_set,accuracy,f1_score,auc,acc_FF-FS,acc_Real,acc_FF-FaceShifter,acc_FF-F2F,acc_FF-NT,acc_FF-DF,dataset,weight_file,datetime
-Baseline,RAW,0.9924,0.9864,0.9995,0.9978,0.9732,0.9973,0.9984,0.9891,0.9989,faceforensics++,baseline_20260511_140642.pth,20260512_042723
-Baseline,Compressed,0.8104,0.593,0.6904,0.9343,0.2387,0.9578,0.8929,0.8687,0.97,faceforensics++,baseline_20260511_140642.pth,20260512_042723
-Novel,RAW,0.5691,0.4933,0.5842,0.4834,0.5468,0.6365,0.494,0.5791,0.6752,faceforensics++,novel_20260511_140642.pth,20260512_042723
-Novel,Compressed,0.5461,0.4783,0.5723,0.472,0.5568,0.5836,0.5196,0.5287,0.6161,faceforensics++,novel_20260511_140642.pth,20260512_042723

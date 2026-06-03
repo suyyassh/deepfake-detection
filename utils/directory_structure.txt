@@ -1,5 +1,4 @@
 faceforensics++
-├── directory_structure.txt
 ├── test
 │   ├── .DS_Store
 │   ├── FF-fake

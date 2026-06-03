@@ -1,0 +1,3 @@
+model,datetime,dataset,weight_file,epoch,train_loss,train_bce,train_pull,train_push,val_loss,val_bce,val_pull,val_push
+novel,20260603_022349,faceforensics++,novel_20260603_022349.pth,1,0.7395,0.7395,0.0154,0.7104,0.7457,0.7457,0.0154,0.7125
+novel,20260603_022349,faceforensics++,novel_20260603_022349.pth,2,0.2049,0.2000,0.0264,0.0230,0.0748,0.0729,0.0151,0.0036

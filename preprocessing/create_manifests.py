@@ -6,6 +6,40 @@ import random
 import glob
 from utils.config_loader import load_config, validate_config
 
+# canonical manipulation-method names, used consistently across train and test.
+# the train split encodes the full names in its filenames, while the test split
+# uses abbreviated FF- tags; this map collapses both onto one vocabulary so the
+# per-method evaluation table lines up. The map is idempotent: a canonical name
+# maps to itself, so re-normalising is safe.
+METHOD_MAP = {
+    # canonical -> canonical (train-side names)
+    'Deepfakes': 'Deepfakes',
+    'Face2Face': 'Face2Face',
+    'FaceSwap': 'FaceSwap',
+    'FaceShifter': 'FaceShifter',
+    'NeuralTextures': 'NeuralTextures',
+    # FF- tags (test-side names) -> canonical
+    'FF-DF': 'Deepfakes',
+    'FF-F2F': 'Face2Face',
+    'FF-FS': 'FaceSwap',
+    'FF-FaceShifter': 'FaceShifter',
+    'FF-NT': 'NeuralTextures',
+}
+
+def normalize_method(raw_tag):
+    """
+    maps a raw method tag (either a canonical name or an FF- test tag) to the
+    single canonical method name. Raises KeyError on any unrecognised tag so a
+    naming scheme we have not accounted for stops manifest generation loudly,
+    rather than silently writing a wrong or fragmented per-method label.
+    """
+    if raw_tag not in METHOD_MAP:
+        raise KeyError(
+            f"Unrecognised method tag '{raw_tag}'. Known tags: {sorted(METHOD_MAP)}. "
+            f"Add it to METHOD_MAP in create_manifests.py before continuing."
+        )
+    return METHOD_MAP[raw_tag]
+
 def get_flattened_files(directory):
     """
     returns a list of flattened filenames found in a directory.
@@ -100,7 +134,8 @@ def generate_manifests(config):
         """
         data = []
         for f_name in f_list:
-            method = f_name.split('_')[1]
+            raw_method = f_name.split('_')[1]
+            method = normalize_method(raw_method)
             f_path = os.path.join(raw_flat_dir, 'fake', f_name) if use_raw else os.path.join(manip_dir, fake_dir, f_name)
             data.append({'path': f_path, 'label': 1, 'method': method})
             
