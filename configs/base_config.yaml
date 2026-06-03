@@ -5,7 +5,7 @@ data:
  raw_dir: "data/raw/faceforensics++"
  img_size: 256
  num_workers: 4
- train_fraction: 0.4
+ train_fraction: 1.0
 
 model:
  backbone: "efficientnet_b0"

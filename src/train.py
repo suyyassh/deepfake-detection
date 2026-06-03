@@ -6,8 +6,8 @@ import os
 import csv
 from datetime import datetime
 
-from .dataset import StandardDataset, QuadrupletDataset
-from .models import UniversalBackbone, NovelSiameseWrapper
+from src.dataset import StandardDataset, QuadrupletDataset
+from src.models import UniversalBackbone, NovelSiameseWrapper
 from utils.config_loader import load_config
 
 def setup_dirs(backbone):
@@ -30,7 +30,7 @@ def setup_dirs(backbone):
     return paths, timestamp
 
 class EarlyStopping:
-    def __init__(self, patience=7, min_delta=0):
+    def __init__(self, patience=3, min_delta=0):
         self.patience = patience
         self.min_delta = min_delta
         self.counter = 0
@@ -183,7 +183,7 @@ def run_experiment(config_path):
     log_path_b = os.path.join(paths['base_logs'], f"logs_{ts}.csv")
     
     # adding early stopping
-    early_stopper_b = EarlyStopping(patience=7)
+    early_stopper_b = EarlyStopping(patience=3)
     best_val_loss_b = float('inf')
     
     # creating logs and saving weights
@@ -242,7 +242,7 @@ def run_experiment(config_path):
     log_path_n = os.path.join(paths['novel_logs'], f"logs_{ts}.csv")
 
     # adding early stopping
-    early_stopper_n = EarlyStopping(patience=7)
+    early_stopper_n = EarlyStopping(patience=3)
     best_val_loss_n = float('inf')
     
     # creating logs and saving weights
