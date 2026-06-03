@@ -1,20 +1,20 @@
-project_name: "smoke_run_jun3"
+project_name: "deepfake_detection"
 
 data:
  dataset: "faceforensics++"
  raw_dir: "data/raw/faceforensics++"
  img_size: 256
  num_workers: 4
- train_fraction: 0.02
+ train_fraction: 1.0
 
 model:
- backbone: "efficientnet_b0"
+ backbone: "efficientnet_b0"            
  pretrained: true
  embedding_dim: 128
 
 train:
- batch_size_base: 64
+ batch_size_base: 64     
  batch_size_novel: 16
- epochs: 2
- warmup_epochs: 1
+ epochs: 30
+ warmup_epochs: 3
  learning_rate: 0.0001
