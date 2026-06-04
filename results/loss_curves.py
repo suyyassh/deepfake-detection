@@ -1,29 +1,43 @@
+"""
+Loss curve plotter
+
+Usage (from repo root):
+    python -m results.loss_curves \
+        --baseline path to baseline training logs \
+        --novel    path to novel training logs
+
+Plots are saved to results/plots/.
+"""
+
 import os
+import argparse
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
-BASELINE_LOG = "results/training/logs/efficientnet_b0/baseline/logs_20260517_053254.csv"
-NOVEL_LOG    = "results/training/logs/efficientnet_b0/novel/logs_20260517_053254.csv"
-OUT_DIR      = "results/plots"
+OUT_DIR = "results/plots"
 
 BLUE   = "#4C72B0"
 ORANGE = "#DD8452"
 GREEN  = "#55A868"
 RED    = "#C44E52"
-PURPLE = "#8172B2"
 GRAY   = "#8C8C8C"
+
+
+def stem(csv_path):
+    """
+    extracts the timestamp stem from a log filename, e.g. '20260603_055220'.
+    """
+    base = os.path.splitext(os.path.basename(csv_path))[0]  
+    return base[len("logs_"):]                             
 
 
 def add_warmup_band(ax, df, label=True):
     """
-    shades the warmup region if a warmup period is detectable.
-    (novel model keeps lambdas at 0 for the first few epochs,
-    which shows up as identical train_pull / train_push values)
+    shades the warmup region — epochs where pull and push are both zero.
     """
     if "train_pull" not in df.columns:
         return
-    # warmup epochs are those where pull == push == 0 (lambdas zeroed out)
     warmup_mask = (df["train_pull"] == 0) & (df["train_push"] == 0)
     warmup_epochs = df.loc[warmup_mask, "epoch"]
     if warmup_epochs.empty:
@@ -34,49 +48,50 @@ def add_warmup_band(ax, df, label=True):
     ax.axvline(last_warmup + 0.5, color=GRAY, linewidth=0.8, linestyle="--")
 
 
-def plot_baseline(df: pd.DataFrame, out_path: str):
-    """
-    single-panel plot: train loss vs val loss.
-    """
+def plot_baseline(csv_path):
+    df = pd.read_csv(csv_path)
+    ts = stem(csv_path)
+    out_path = os.path.join(OUT_DIR, f"baseline_{ts}.png")
+
     fig, ax = plt.subplots(figsize=(8, 4.5))
 
     epochs = df["epoch"]
     ax.plot(epochs, df["train_loss"], color=BLUE,   linewidth=1.8, label="Train loss")
-    ax.plot(epochs, df["val_loss"],   color=ORANGE, linewidth=1.8, linestyle="--", label="Val loss")
+    ax.plot(epochs, df["val_loss"],   color=ORANGE, linewidth=1.8,
+            linestyle="--", label="Val loss")
 
-    # annotate the best val checkpoint
-    best_idx  = df["val_loss"].idxmin()
-    best_ep   = df.loc[best_idx, "epoch"]
-    best_val  = df.loc[best_idx, "val_loss"]
+    # annotate best val checkpoint
+    best_idx = df["val_loss"].idxmin()
+    best_ep  = df.loc[best_idx, "epoch"]
+    best_val = df.loc[best_idx, "val_loss"]
     ax.scatter(best_ep, best_val, color=ORANGE, zorder=5, s=60)
     ax.annotate(f"  best val\n  ep {best_ep}  ({best_val:.4f})",
                 xy=(best_ep, best_val), fontsize=8, color=ORANGE)
 
     ax.set_xlabel("Epoch", fontsize=11)
     ax.set_ylabel("Loss",  fontsize=11)
-    ax.set_title("Baseline – Training & Validation Loss", fontsize=13, fontweight="bold")
+    ax.set_title("Baseline — Training & Validation Loss",
+                 fontsize=13, fontweight="bold")
     ax.legend(fontsize=9)
     ax.set_xlim(epochs.min() - 0.5, epochs.max() + 0.5)
     ax.grid(True, alpha=0.3)
 
-    # pull metadata from the log for the subtitle
     dataset = df["dataset"].iloc[0] if "dataset" in df.columns else ""
-    ts      = str(df["datetime"].iloc[0]) if "datetime" in df.columns else ""
     fig.text(0.5, 0.01, f"dataset: {dataset}   |   run: {ts}",
              ha="center", fontsize=8, color=GRAY)
 
     fig.tight_layout(rect=[0, 0.04, 1, 1])
+    os.makedirs(OUT_DIR, exist_ok=True)
     fig.savefig(out_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"Saved: {out_path}")
 
 
-def plot_novel(df: pd.DataFrame, out_path: str):
-    """
-    two-panel plot:
-      top    – total train loss vs val loss
-      bottom – loss component breakdown (BCE / Pull / Push) for train and val
-    """
+def plot_novel(csv_path):
+    df = pd.read_csv(csv_path)
+    ts = stem(csv_path)
+    out_path = os.path.join(OUT_DIR, f"novel_{ts}.png")
+
     fig = plt.figure(figsize=(10, 8))
     gs  = gridspec.GridSpec(2, 1, height_ratios=[1, 1.4], hspace=0.38)
     ax_top = fig.add_subplot(gs[0])
@@ -85,8 +100,10 @@ def plot_novel(df: pd.DataFrame, out_path: str):
     epochs = df["epoch"]
 
     # top panel: total loss
-    ax_top.plot(epochs, df["train_loss"], color=BLUE,   linewidth=1.8, label="Train loss (total)")
-    ax_top.plot(epochs, df["val_loss"],   color=ORANGE, linewidth=1.8, linestyle="--", label="Val loss (total)")
+    ax_top.plot(epochs, df["train_loss"], color=BLUE,   linewidth=1.8,
+                label="Train loss (total)")
+    ax_top.plot(epochs, df["val_loss"],   color=ORANGE, linewidth=1.8,
+                linestyle="--", label="Val loss (total)")
 
     best_idx = df["val_loss"].idxmin()
     best_ep  = df.loc[best_idx, "epoch"]
@@ -98,16 +115,16 @@ def plot_novel(df: pd.DataFrame, out_path: str):
     add_warmup_band(ax_top, df)
     ax_top.set_xlabel("Epoch", fontsize=10)
     ax_top.set_ylabel("Loss",  fontsize=10)
-    ax_top.set_title("Novel – Total Loss", fontsize=12, fontweight="bold")
+    ax_top.set_title("Novel — Total Loss", fontsize=12, fontweight="bold")
     ax_top.legend(fontsize=8)
     ax_top.set_xlim(epochs.min() - 0.5, epochs.max() + 0.5)
     ax_top.grid(True, alpha=0.3)
 
     # bottom panel: component breakdown
     components = [
-        ("train_bce",  "val_bce",  "BCE",  BLUE,   BLUE),
-        ("train_pull", "val_pull", "Pull", GREEN,  GREEN),
-        ("train_push", "val_push", "Push", RED,    RED),
+        ("train_bce",  "val_bce",  "BCE",  BLUE,  BLUE),
+        ("train_pull", "val_pull", "Pull", GREEN, GREEN),
+        ("train_push", "val_push", "Push", RED,   RED),
     ]
     for train_col, val_col, label, t_col, v_col in components:
         if train_col not in df.columns:
@@ -120,49 +137,53 @@ def plot_novel(df: pd.DataFrame, out_path: str):
     add_warmup_band(ax_bot, df, label=False)
     ax_bot.set_xlabel("Epoch", fontsize=10)
     ax_bot.set_ylabel("Loss",  fontsize=10)
-    ax_bot.set_title("Novel – Loss Component Breakdown", fontsize=12, fontweight="bold")
+    ax_bot.set_title("Novel — Loss Component Breakdown",
+                     fontsize=12, fontweight="bold")
     ax_bot.legend(fontsize=8, ncol=2)
     ax_bot.set_xlim(epochs.min() - 0.5, epochs.max() + 0.5)
     ax_bot.grid(True, alpha=0.3)
 
-    # warmup legend patch
+    # add warmup patch to both legends
     from matplotlib.patches import Patch
     warmup_patch = Patch(facecolor=GRAY, alpha=0.15, label="warmup phase")
     for ax in [ax_top, ax_bot]:
         handles, labels = ax.get_legend_handles_labels()
-        if "warmup" in labels or any("warmup" in l for l in labels):
-            ax.legend(handles=handles, labels=labels, fontsize=8, ncol=2)
-        else:
+        if "warmup" not in labels:
             handles.append(warmup_patch)
-            ax.legend(handles=handles, fontsize=8, ncol=2)
+        ax.legend(handles=handles, fontsize=8, ncol=2)
 
     dataset = df["dataset"].iloc[0] if "dataset" in df.columns else ""
-    ts      = str(df["datetime"].iloc[0]) if "datetime" in df.columns else ""
     fig.text(0.5, 0.005, f"dataset: {dataset}   |   run: {ts}",
              ha="center", fontsize=8, color=GRAY)
 
+    os.makedirs(OUT_DIR, exist_ok=True)
     fig.savefig(out_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"Saved: {out_path}")
 
 
 def main():
-    if not BASELINE_LOG and not NOVEL_LOG:
-        raise ValueError("Fill in at least one path in the CONFIG block at the top of the script.")
+    parser = argparse.ArgumentParser(description="Plot training loss curves.")
+    parser.add_argument("--baseline", type=str, default=None,
+                        help="Path to baseline training log CSV")
+    parser.add_argument("--novel", type=str, default=None,
+                        help="Path to novel training log CSV")
+    args = parser.parse_args()
 
-    if BASELINE_LOG:
-        df_b = pd.read_csv(BASELINE_LOG)
-        out_dir = OUT_DIR or os.path.dirname(os.path.abspath(BASELINE_LOG))
-        os.makedirs(out_dir, exist_ok=True)
-        fname = os.path.splitext(os.path.basename(BASELINE_LOG))[0]
-        plot_baseline(df_b, os.path.join(out_dir, f"{fname}_loss_curve.png"))
+    if not args.baseline and not args.novel:
+        parser.error("Provide at least one of --baseline or --novel.")
 
-    if NOVEL_LOG:
-        df_n = pd.read_csv(NOVEL_LOG)
-        out_dir = OUT_DIR or os.path.dirname(os.path.abspath(NOVEL_LOG))
-        os.makedirs(out_dir, exist_ok=True)
-        fname = os.path.splitext(os.path.basename(NOVEL_LOG))[0]
-        plot_novel(df_n, os.path.join(out_dir, f"{fname}_loss_curve.png"))
+    if args.baseline:
+        if not os.path.isfile(args.baseline):
+            print(f"Error: baseline log not found: {args.baseline}")
+        else:
+            plot_baseline(args.baseline)
+
+    if args.novel:
+        if not os.path.isfile(args.novel):
+            print(f"Error: novel log not found: {args.novel}")
+        else:
+            plot_novel(args.novel)
 
 
 if __name__ == "__main__":
