@@ -1,9 +1,0 @@
-model,datetime,dataset,weight_file,epoch,train_loss,val_loss
-baseline,20260512_160927,faceforensics++,baseline_20260512_160927.pth,1,0.1755,0.0907
-baseline,20260512_160927,faceforensics++,baseline_20260512_160927.pth,2,0.0573,0.0606
-baseline,20260512_160927,faceforensics++,baseline_20260512_160927.pth,3,0.0334,0.0564
-baseline,20260512_160927,faceforensics++,baseline_20260512_160927.pth,4,0.0239,0.0571
-baseline,20260512_160927,faceforensics++,baseline_20260512_160927.pth,5,0.0189,0.0550
-baseline,20260512_160927,faceforensics++,baseline_20260512_160927.pth,6,0.0154,0.0700
-baseline,20260512_160927,faceforensics++,baseline_20260512_160927.pth,7,0.0143,0.0945
-baseline,20260512_160927,faceforensics++,baseline_20260512_160927.pth,8,0.0110,0.0687

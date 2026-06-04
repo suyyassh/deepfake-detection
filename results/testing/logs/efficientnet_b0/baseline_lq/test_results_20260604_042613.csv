@@ -1,0 +1,5 @@
+model,test_set,threshold_type,threshold,accuracy,f1_score,auc,acc_FaceSwap,acc_Real,acc_FaceShifter,acc_Face2Face,acc_NeuralTextures,acc_Deepfakes,dataset,weight_file,datetime
+Baseline_LQ,RAW,fixed_0.5,0.5,0.8732,0.7541,0.875,0.8899,0.5316,0.9716,0.9306,0.9232,0.9924,faceforensics++,baseline_lq_20260604_012604.pth,20260604_042613
+Baseline_LQ,RAW,val_calibrated,0.8491,0.8475,0.7544,0.875,0.7965,0.6952,0.9067,0.8801,0.8326,0.9743,faceforensics++,baseline_lq_20260604_012604.pth,20260604_042613
+Baseline_LQ,Compressed,fixed_0.5,0.5,0.9655,0.94,0.9918,0.9906,0.9402,0.99,0.9717,0.906,0.9949,faceforensics++,baseline_lq_20260604_012604.pth,20260604_042613
+Baseline_LQ,Compressed,val_calibrated,0.8491,0.9247,0.883,0.9918,0.971,0.9824,0.9663,0.915,0.7316,0.9823,faceforensics++,baseline_lq_20260604_012604.pth,20260604_042613

@@ -1,3 +1,0 @@
-model,datetime,dataset,weight_file,epoch,train_loss,val_loss
-baseline,20260603_022349,faceforensics++,baseline_20260603_022349.pth,1,0.4657,0.3645
-baseline,20260603_022349,faceforensics++,baseline_20260603_022349.pth,2,0.2556,0.3218
