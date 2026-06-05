@@ -1,11 +1,11 @@
-project_name: "hyperparameter_tuning"
+project_name: "deepfake_detection_warmup=1"
 
 data:
  dataset: "faceforensics++"
  raw_dir: "data/raw/faceforensics++"
  img_size: 256
  num_workers: 4
- train_fraction: 0.4
+ train_fraction: 1.0
 
 model:
  backbone: "efficientnet_b0"            
@@ -15,6 +15,6 @@ model:
 train:
  batch_size_base: 64     
  batch_size_novel: 16
- epochs: 10
- warmup_epochs: 3
+ epochs: 30
+ warmup_epochs: 1
  learning_rate: 0.0001
