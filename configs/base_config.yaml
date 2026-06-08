@@ -1,4 +1,4 @@
-project_name: "deepfake_detection_xception"
+project_name: "deepfake_detection_densenet121"
 
 data:
  dataset: "faceforensics++"
@@ -8,7 +8,7 @@ data:
  train_fraction: 0.4
 
 model:
- backbone: "xception"            
+ backbone: "densenet121"            
  pretrained: true
  embedding_dim: 128
 

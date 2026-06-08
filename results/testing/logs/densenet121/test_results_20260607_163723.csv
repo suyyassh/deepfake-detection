@@ -1,0 +1,9 @@
+model,test_set,threshold_type,threshold,accuracy,f1_score,auc,acc_FaceSwap,acc_Real,acc_FaceShifter,acc_Face2Face,acc_NeuralTextures,acc_Deepfakes,dataset,weight_file,datetime
+Baseline,RAW,fixed_0.5,0.5,0.9865,0.9754,0.9983,0.9931,0.9484,0.9926,0.9969,0.9893,0.9984,faceforensics++,baseline_20260606_071138.pth,20260607_163723
+Baseline,RAW,val_calibrated,0.8975,0.9831,0.9704,0.9983,0.9846,0.9817,0.9859,0.9886,0.9647,0.9931,faceforensics++,baseline_20260606_071138.pth,20260607_163723
+Baseline,Compressed,fixed_0.5,0.5,0.2123,0.2047,0.5483,0.0554,0.9306,0.0813,0.0732,0.0616,0.0715,faceforensics++,baseline_20260606_071138.pth,20260607_163723
+Baseline,Compressed,val_calibrated,0.8975,0.1667,0.1429,0.5483,0.0,1.0,0.0,0.0,0.0,0.0,faceforensics++,baseline_20260606_071138.pth,20260607_163723
+Novel,RAW,fixed_0.5,0.5,0.1675,0.1439,0.5568,0.0,1.0,0.0011,0.0,0.0,0.0034,faceforensics++,novel_20260606_071138.pth,20260607_163723
+Novel,RAW,val_calibrated,0.0,0.562,0.4814,0.5568,0.5676,0.503,0.6399,0.5071,0.5231,0.6316,faceforensics++,novel_20260606_071138.pth,20260607_163723
+Novel,Compressed,fixed_0.5,0.5,0.1765,0.1557,0.6082,0.0085,0.9991,0.0234,0.0036,0.0049,0.019,faceforensics++,novel_20260606_071138.pth,20260607_163723
+Novel,Compressed,val_calibrated,0.0,0.6798,0.5372,0.6082,0.6853,0.3742,0.8453,0.6676,0.7258,0.7805,faceforensics++,novel_20260606_071138.pth,20260607_163723
