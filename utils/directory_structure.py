@@ -1,6 +1,6 @@
 from pathlib import Path
 
-TARGET_DIRECTORY = "/home/suyash/deepfake-detection-v2/data/raw/faceforensics++"
+TARGET_DIRECTORY = "/home/suyash/deepfake-detection-v2/data/raw"
 OUTPUT_FILENAME = "directory_structure.txt"
 
 def write_tree(directory, f, prefix="", limit=3):
